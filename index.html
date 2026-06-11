@@ -5,58 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            padding: 15px; margin: 0;
-        }
-        input, textarea, button {
-            width: 100%; box-sizing: border-box;
-            padding: 12px; margin-top: 10px;
-            border-radius: 8px; font-size: 16px;
-            border: 1px solid var(--tg-theme-hint-color, #ccc);
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-        }
+        body { font-family: sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); padding: 15px; margin: 0; }
+        select, textarea, button { width: 100%; box-sizing: border-box; padding: 12px; margin-top: 10px; border-radius: 8px; font-size: 16px; border: 1px solid var(--tg-theme-hint-color, #ccc); background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); }
         textarea { resize: vertical; min-height: 100px; }
-        button {
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none; font-weight: bold; cursor: pointer;
-        }
+        button { background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #ffffff); border: none; font-weight: bold; cursor: pointer; margin-top: 20px;}
         .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; text-align: center;}
     </style>
 </head>
 <body>
-    <div class="header">Отправить в MAX</div>
+    <div class="header">Выбери чат и напиши ответ</div>
     
-    <input type="text" id="chatId" placeholder="ID чата (например: 123)">
+    <select id="chatSelect">
+        <option value="">Загрузка чатов...</option>
+    </select>
+    
     <textarea id="messageText" placeholder="Напиши текст ответа..."></textarea>
     
-    <button onclick="sendToBot()">Отправить</button>
+    <button onclick="sendToBot()">Отправить в MAX</button>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Растягиваем на весь экран
+        tg.expand();
 
+        // 1. Парсим список чатов, который нам прислал Python-скрипт в ссылке
+        let params = new URLSearchParams(window.location.search);
+        let chatsRaw = params.get('chats');
+        let select = document.getElementById('chatSelect');
+
+        if (chatsRaw) {
+            try {
+                let chats = JSON.parse(decodeURIComponent(chatsRaw));
+                select.innerHTML = '<option value="">-- Выбери чат из списка --</option>';
+                // Заполняем выпадающий список реальными именами
+                chats.forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c.i; // Скрытый ID чата для бота
+                    opt.innerText = c.n; // Красивое Имя для тебя
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                select.innerHTML = '<option value="">Ошибка загрузки списка</option>';
+            }
+        } else {
+            select.innerHTML = '<option value="">Чаты не подгрузились (нажми /start в боте)</option>';
+        }
+
+        // 2. Отправка данных обратно
         function sendToBot() {
-            let chatId = document.getElementById('chatId').value;
+            let chatId = select.value;
             let text = document.getElementById('messageText').value;
 
             if (!chatId || !text) {
-                tg.showAlert("Заполни все поля!");
+                tg.showAlert("Выбери чат и напиши сообщение!");
                 return;
             }
 
-            // Формируем пакет данных
-            let dataPackage = {
-                action: "send_to_max",
-                chat_id: chatId,
-                text: text
-            };
-
-            // Отправляем данные в Телеграм и автоматически закрываем WebApp
+            let dataPackage = { action: "send_to_max", chat_id: chatId, text: text };
             tg.sendData(JSON.stringify(dataPackage));
         }
     </script>
