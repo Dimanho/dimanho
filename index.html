@@ -3,66 +3,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAX Bridge WebApp</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); padding: 15px; margin: 0; }
-        select, textarea, button { width: 100%; box-sizing: border-box; padding: 12px; margin-top: 10px; border-radius: 8px; font-size: 16px; border: 1px solid var(--tg-theme-hint-color, #ccc); background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); }
-        textarea { resize: vertical; min-height: 100px; }
-        button { background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #ffffff); border: none; font-weight: bold; cursor: pointer; margin-top: 20px;}
-        .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; text-align: center;}
+        :root {
+            --tg-theme-bg-color: #ffffff;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #707579;
+            --tg-theme-link-color: #2481cc;
+            --tg-theme-button-color: #2481cc;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #f4f4f5;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Основной контейнер приложения */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* ЭКРАН 1: СПИСОК ЧАТОВ */
+        #chats-screen {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--tg-theme-bg-color);
+        }
+
+        .screen-header {
+            padding: 14px 16px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            background-color: var(--tg-theme-bg-color);
+        }
+
+        #chats-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .chat-item:active {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-avatar {
+            width: 46px;
+            height: 46px;
+            background-color: var(--tg-theme-link-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .chat-info {
+            flex: 1;
+        }
+
+        .chat-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        /* ЭКРАН 2: ОКНО ИСТОРИИ И ДИАЛОГА */
+        #dialog-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--tg-theme-secondary-bg-color);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+
+        #dialog-screen.active {
+            transform: translateX(0);
+        }
+
+        .dialog-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            background-color: var(--tg-theme-bg-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--tg-theme-link-color);
+            font-size: 16px;
+            padding: 0;
+            margin-right: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .current-chat-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Сообщения */
+        #messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .msg-bubble {
+            max-width: 75%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+            position: relative;
+            word-break: break-word;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+
+        /* Входящее (чужое) сообщение */
+        .msg-bubble.in {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Исходящее (твое) сообщение */
+        .msg-bubble.out {
+            background-color: #effdde; /* Приятный зеленый цвет как в ТГ */
+            color: #000000;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-time {
+            font-size: 11px;
+            color: var(--tg-theme-hint-color);
+            text-align: right;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .loading-text {
+            text-align: center;
+            color: var(--tg-theme-hint-color);
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        /* Панель ввода текста */
+        .input-panel {
+            padding: 8px 12px;
+            background-color: var(--tg-theme-bg-color);
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .message-input {
+            flex: 1;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 18px;
+            padding: 8px 14px;
+            font-size: 15px;
+            outline: none;
+            background-color: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+
+        .send-btn {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <div class="header">Выбери чат и напиши ответ</div>
-    
-    <select id="chatSelect">
-        <option value="">Загрузка чатов...</option>
-    </select>
-    
-    <textarea id="messageText" placeholder="Напиши текст ответа..."></textarea>
-    
-    <button onclick="sendToBot()">Отправить в MAX</button>
+
+    <div id="app">
+        <div id="chats-screen">
+            <div class="screen-header">Активные чаты MAX</div>
+            <div id="chats-list">
+                </div>
+        </div>
+
+        <div id="dialog-screen">
+            <div class="dialog-header">
+                <button class="back-btn" onclick="closeDialog()">◀ Назад</button>
+                <div class="current-chat-name" id="chat-title">Чат</div>
+            </div>
+            <div id="messages-container">
+                </div>
+            <div class="input-panel">
+                <input type="text" id="msg-input" class="message-input" placeholder="Cообщение..." onkeypress="checkEnter(event)">
+                <button class="send-btn" onclick="sendMessage()">➔</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран телефона
 
-        // 1. Парсим список чатов, который нам прислал Python-скрипт в ссылке
-        let params = new URLSearchParams(window.location.search);
-        let chatsRaw = params.get('chats');
-        let select = document.getElementById('chatSelect');
+        // ТВОЙ ДОМАШНИЙ СЕРВЕР (куда слать запросы за историей)
+        const BACKEND_BASE = "https://d1manho.online:9443";
+        
+        let currentChatId = null;
 
-        if (chatsRaw) {
-            try {
-                let chats = JSON.parse(decodeURIComponent(chatsRaw));
-                select.innerHTML = '<option value="">-- Выбери чат из списка --</option>';
-                // Заполняем выпадающий список реальными именами
-                chats.forEach(c => {
-                    let opt = document.createElement('option');
-                    opt.value = c.i; // Скрытый ID чата для бота
-                    opt.innerText = c.n; // Красивое Имя для тебя
-                    select.appendChild(opt);
-                });
-            } catch (e) {
-                select.innerHTML = '<option value="">Ошибка загрузки списка</option>';
-            }
-        } else {
-            select.innerHTML = '<option value="">Чаты не подгрузились (нажми /start в боте)</option>';
-        }
-
-        // 2. Отправка данных обратно
-        function sendToBot() {
-            let chatId = select.value;
-            let text = document.getElementById('messageText').value;
-
-            if (!chatId || !text) {
-                tg.showAlert("Выбери чат и напиши сообщение!");
+        // 1. Читаем список чатов из URL, который сгенерировал main.py
+        function initChats() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const chatsData = urlParams.get('chats');
+            const listContainer = document.getElementById('chats-list');
+            
+            if (!chatsData) {
+                listContainer.innerHTML = '<div class="loading-text">Список чатов пуст. Обнови его в боте.</div>';
                 return;
             }
 
-            let dataPackage = { action: "send_to_max", chat_id: chatId, text: text };
-            tg.sendData(JSON.stringify(dataPackage));
+            try {
+                const chats = JSON.parse(decodeURIComponent(chatsData));
+                listContainer.innerHTML = '';
+                
+                chats.forEach(chat => {
+                    const firstLetter = chat.n ? chat.n.charAt(0).toUpperCase() : '?';
+                    const item = document.createElement('div');
+                    item.className = 'chat-item';
+                    item.onclick = () => openDialog(chat.i);
+                    
+                    item.innerHTML = `
+                        <div class="chat-avatar">${firstLetter}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${chat.n}</div>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            } catch (e) {
+                listContainer.innerHTML = '<div class="loading-text">Ошибка загрузки чатов.</div>';
+            }
         }
+
+        // 2. Открытие диалога и загрузка истории с твоего FastAPI сервера
+        async function openDialog(chatName) {
+            currentChatId = chatName;
+            document.getElementById('chat-title').innerText = chatName;
+            
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '<div class="loading-text">Загрузка истории переписки...</div>';
+            
+            // Показываем экран диалога (слайд анимация)
+            document.getElementById('dialog-screen').classList.add('active');
+
+            try {
+                // Делаем реальный запрос на твой домашний ПК
+                const response = await fetch(`${BACKEND_BASE}/api/history/${encodeURIComponent(chatName)}`);
+                const data = await response.json();
+                
+                container.innerHTML = '';
+                
+                if (!data.history || data.history.length === 0) {
+                    container.innerHTML = '<div class="loading-text">История пуста. Будь первым!</div>';
+                    return;
+                }
+
+                // Отрисовываем сообщения
+                data.history.forEach(msg => {
+                    const bubble = document.createElement('div');
+                    // Если msg.is_out равен true -> вешаем класс 'out' (справа), иначе 'in' (слева)
+                    bubble.className = `msg-bubble ${msg.is_out ? 'out' : 'in'}`;
+                    bubble.innerHTML = `${escapeHtml(msg.text)} <span class="msg-time">${escapeHtml(msg.time)}</span>`;
+                    container.appendChild(bubble);
+                });
+
+                // Автоматически скроллим вниз к последним сообщениям
+                container.scrollTop = container.scrollHeight;
+
+            } catch (error) {
+                container.innerHTML = '<div class="loading-text" style="color: #e53935;">❌ Не удалось подключиться к серверу истории. Проверь прокси/сервер.</div>';
+            }
+        }
+
+        // Кнопка назад
+        function closeDialog() {
+            document.getElementById('dialog-screen').classList.remove('active');
+            currentChatId = null;
+        }
+
+        // Отправка сообщения обратно в Telegram через WebApp.sendData
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            
+            if (!text || !currentChatId) return;
+
+            const payload = {
+                chat_id: currentChatId,
+                text: text
+            };
+
+            // Отправляем JSON обратно боту, бот его поймает и впечатает в MAX браузер
+            tg.sendData(JSON.stringify(payload));
+            
+            // Закрываем WebApp после отправки
+            tg.close();
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Безопасный вывод текста, чтобы разметка не ломалась
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Запуск при старте страницы
+        initChats();
     </script>
 </body>
 </html>
