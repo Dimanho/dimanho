@@ -101,20 +101,12 @@
         .msg-bubble.in .msg-time { color: rgba(255, 255, 255, 0.4); }
         .msg-bubble.out .msg-time { color: rgba(0, 0, 0, 0.4); }
 
-        .loading-text { text-align: center; color: var(--hint-color); margin-top: 20px; font-size: 14px; }
+        .loading-text { text-align: center; color: var(--hint-color); margin-top: 20px; margin-bottom: 20px; font-size: 14px; }
 
-        /* КНОПКА ЗАГРУЗКИ ИСТОРИИ */
         .load-more-btn {
-            text-align: center;
-            padding: 8px 16px;
-            margin: 0 auto 10px auto;
-            background-color: var(--second-bg);
-            border-radius: 16px;
-            color: #2481cc;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            width: max-content;
+            text-align: center; padding: 8px 16px; margin: 0 auto 10px auto;
+            background-color: var(--second-bg); border-radius: 16px;
+            color: #2481cc; font-size: 14px; font-weight: 500; cursor: pointer; width: max-content;
         }
         .load-more-btn:active { background-color: rgba(128, 128, 128, 0.2); }
 
@@ -153,7 +145,8 @@
 
         const BACKEND_BASE = "https://d1manho.online:9443";
         let currentChatId = null;
-        let currentPages = 1; // Счетчик страниц истории
+        let currentPages = 1; 
+        let lastHistoryLength = 0; // Запоминаем, сколько сообщений было
 
         async function initChats() {
             const listContainer = document.getElementById('chats-list');
@@ -174,11 +167,7 @@
                     const item = document.createElement('div');
                     item.className = 'chat-item';
                     item.onclick = () => openDialog(chat.i);
-                    
-                    item.innerHTML = `
-                        <div class="chat-avatar">${firstLetter}</div>
-                        <div class="chat-name">${chat.n}</div>
-                    `;
+                    item.innerHTML = `<div class="chat-avatar">${firstLetter}</div><div class="chat-name">${chat.n}</div>`;
                     listContainer.appendChild(item);
                 });
             } catch (e) {
@@ -188,14 +177,15 @@
 
         async function openDialog(chatName) {
             currentChatId = chatName;
-            currentPages = 1; // Сбрасываем страницы при входе в чат
+            currentPages = 1;
+            lastHistoryLength = 0; // Сброс счетчика
+            
             document.getElementById('chat-title').innerText = chatName;
             document.getElementById('dialog-screen').classList.add('active');
             
             await renderHistory(chatName, currentPages);
         }
 
-        // Вызывается по кнопке "Загрузить старые"
         async function loadOlderMessages() {
             currentPages++;
             const btn = document.getElementById('load-more-btn');
@@ -206,18 +196,13 @@
 
         async function renderHistory(chatName, pages) {
             const container = document.getElementById('messages-container');
-            
-            if (pages === 1) {
-                container.innerHTML = '<div class="loading-text">Синхронизация...</div>';
-            }
+            if (pages === 1) container.innerHTML = '<div class="loading-text">Синхронизация...</div>';
 
             try {
                 const response = await fetch(`${BACKEND_BASE}/api/history/${encodeURIComponent(chatName)}?pages=${pages}`);
                 const data = await response.json();
                 
-                // Запоминаем текущую высоту скролла, чтобы потом вернуть экран на место
                 const oldScrollHeight = container.scrollHeight;
-                
                 container.innerHTML = '';
                 
                 if (!data.history || data.history.length === 0) {
@@ -225,61 +210,55 @@
                     return;
                 }
 
-                // Добавляем кнопку прокрутки на самый верх, если сообщений хватает (35+)
-                if (data.history.length >= (pages * 40) - 10) {
+                // УМНАЯ ЛОГИКА ПОКАЗА КНОПКИ
+                let showBtn = false;
+                if (pages === 1 && data.history.length >= 25) {
+                    showBtn = true; // На первой странице показываем, если сообщений прилично
+                } else if (pages > 1 && data.history.length > lastHistoryLength) {
+                    showBtn = true; // На следующих - пока прибавляются новые
+                }
+
+                if (showBtn) {
                     const loadBtn = document.createElement('div');
                     loadBtn.id = 'load-more-btn';
                     loadBtn.className = 'load-more-btn';
                     loadBtn.innerText = '🔼 Загрузить старые сообщения';
                     loadBtn.onclick = loadOlderMessages;
                     container.appendChild(loadBtn);
+                } else if (pages > 1 && data.history.length === lastHistoryLength) {
+                    const endText = document.createElement('div');
+                    endText.className = 'loading-text';
+                    endText.innerText = 'Начало переписки';
+                    container.appendChild(endText);
                 }
 
-                // Отрисовываем сообщения
+                // Обновляем счетчик для следующего раза
+                lastHistoryLength = data.history.length;
+
                 data.history.forEach(msg => {
                     const row = document.createElement('div');
                     row.className = `msg-row ${msg.is_out ? 'out' : 'in'}`;
                     
                     let contentHtml = '';
-                    
                     if (msg.media_type === 'photo' && msg.media_url) {
                         contentHtml += `<img src="${msg.media_url}" class="chat-photo" loading="lazy">`;
                     } else if (msg.media_type === 'file') {
-                        contentHtml += `
-                            <div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)">
-                                <div class="file-icon">📎</div>
-                                <div class="file-name">${escapeHtml(msg.media_name)}</div>
-                                <div class="file-download-btn">⬇️</div>
-                            </div>
-                        `;
+                        contentHtml += `<div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)"><div class="file-icon">📎</div><div class="file-name">${escapeHtml(msg.media_name)}</div><div class="file-download-btn">⬇️</div></div>`;
                     }
-                    
-                    if (msg.text) {
-                        contentHtml += `<div class="msg-text">${escapeHtml(msg.text)}</div>`;
-                    }
+                    if (msg.text) contentHtml += `<div class="msg-text">${escapeHtml(msg.text)}</div>`;
 
-                    row.innerHTML = `
-                        <div class="msg-bubble ${msg.is_out ? 'out' : 'in'}">
-                            ${contentHtml}
-                            <span class="msg-time">${escapeHtml(msg.time)}</span>
-                        </div>
-                    `;
+                    row.innerHTML = `<div class="msg-bubble ${msg.is_out ? 'out' : 'in'}">${contentHtml}<span class="msg-time">${escapeHtml(msg.time)}</span></div>`;
                     container.appendChild(row);
                 });
 
-                // Бесшовная прокрутка
                 if (pages === 1) {
-                    // Если это первая загрузка — кидаем в самый низ к новым сообщениям
                     container.scrollTop = container.scrollHeight;
                 } else {
-                    // Если подгрузили старые — оставляем пользователя на том же сообщении, которое он читал
                     container.scrollTop = container.scrollHeight - oldScrollHeight;
                 }
                 
             } catch (error) {
-                if (pages === 1) {
-                    container.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка сети. Проверь сервер.</div>';
-                }
+                if (pages === 1) container.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка сети. Проверь сервер.</div>';
             }
         }
 
@@ -291,16 +270,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ chat: currentChatId, file_name: fileName })
                 });
-            } catch (e) {
-                console.error("Ошибка при запросе файла:", e);
-            }
+            } catch (e) { console.error("Ошибка при запросе файла:", e); }
         }
 
-        function closeDialog() {
-            document.getElementById('dialog-screen').classList.remove('active');
-            currentChatId = null;
-        }
-
+        function closeDialog() { document.getElementById('dialog-screen').classList.remove('active'); currentChatId = null; }
         function sendMessage() {
             const input = document.getElementById('msg-input');
             const text = input.value.trim();
