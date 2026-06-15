@@ -83,10 +83,8 @@
         .msg-bubble.out { background-color: var(--msg-out-bg); color: var(--msg-out-text); border-bottom-right-radius: 4px; }
         
         .msg-text { margin-bottom: 2px; }
-        
         .chat-photo { max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: cover; }
         
-        /* КЛИКАБЕЛЬНЫЙ ФАЙЛ */
         .chat-file {
             display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; gap: 10px;
             cursor: pointer; transition: opacity 0.2s;
@@ -104,6 +102,21 @@
         .msg-bubble.out .msg-time { color: rgba(0, 0, 0, 0.4); }
 
         .loading-text { text-align: center; color: var(--hint-color); margin-top: 20px; font-size: 14px; }
+
+        /* КНОПКА ЗАГРУЗКИ ИСТОРИИ */
+        .load-more-btn {
+            text-align: center;
+            padding: 8px 16px;
+            margin: 0 auto 10px auto;
+            background-color: var(--second-bg);
+            border-radius: 16px;
+            color: #2481cc;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: max-content;
+        }
+        .load-more-btn:active { background-color: rgba(128, 128, 128, 0.2); }
 
         .input-panel { padding: 8px 12px 16px; background-color: var(--second-bg); display: flex; gap: 8px; align-items: center; }
         .message-input {
@@ -140,6 +153,7 @@
 
         const BACKEND_BASE = "https://d1manho.online:9443";
         let currentChatId = null;
+        let currentPages = 1; // Счетчик страниц истории
 
         async function initChats() {
             const listContainer = document.getElementById('chats-list');
@@ -174,15 +188,35 @@
 
         async function openDialog(chatName) {
             currentChatId = chatName;
+            currentPages = 1; // Сбрасываем страницы при входе в чат
             document.getElementById('chat-title').innerText = chatName;
-            
-            const container = document.getElementById('messages-container');
-            container.innerHTML = '<div class="loading-text">Синхронизация...</div>';
             document.getElementById('dialog-screen').classList.add('active');
+            
+            await renderHistory(chatName, currentPages);
+        }
+
+        // Вызывается по кнопке "Загрузить старые"
+        async function loadOlderMessages() {
+            currentPages++;
+            const btn = document.getElementById('load-more-btn');
+            if (btn) btn.innerText = "⏳ Подгрузка из MAX...";
+            
+            await renderHistory(currentChatId, currentPages);
+        }
+
+        async function renderHistory(chatName, pages) {
+            const container = document.getElementById('messages-container');
+            
+            if (pages === 1) {
+                container.innerHTML = '<div class="loading-text">Синхронизация...</div>';
+            }
 
             try {
-                const response = await fetch(`${BACKEND_BASE}/api/history/${encodeURIComponent(chatName)}`);
+                const response = await fetch(`${BACKEND_BASE}/api/history/${encodeURIComponent(chatName)}?pages=${pages}`);
                 const data = await response.json();
+                
+                // Запоминаем текущую высоту скролла, чтобы потом вернуть экран на место
+                const oldScrollHeight = container.scrollHeight;
                 
                 container.innerHTML = '';
                 
@@ -191,6 +225,17 @@
                     return;
                 }
 
+                // Добавляем кнопку прокрутки на самый верх, если сообщений хватает (35+)
+                if (data.history.length >= (pages * 40) - 10) {
+                    const loadBtn = document.createElement('div');
+                    loadBtn.id = 'load-more-btn';
+                    loadBtn.className = 'load-more-btn';
+                    loadBtn.innerText = '🔼 Загрузить старые сообщения';
+                    loadBtn.onclick = loadOlderMessages;
+                    container.appendChild(loadBtn);
+                }
+
+                // Отрисовываем сообщения
                 data.history.forEach(msg => {
                     const row = document.createElement('div');
                     row.className = `msg-row ${msg.is_out ? 'out' : 'in'}`;
@@ -199,9 +244,7 @@
                     
                     if (msg.media_type === 'photo' && msg.media_url) {
                         contentHtml += `<img src="${msg.media_url}" class="chat-photo" loading="lazy">`;
-                    } 
-                    else if (msg.media_type === 'file') {
-                        // Файл теперь кликабельный и вызывает функцию requestFileDownload
+                    } else if (msg.media_type === 'file') {
                         contentHtml += `
                             <div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)">
                                 <div class="file-icon">📎</div>
@@ -224,16 +267,24 @@
                     container.appendChild(row);
                 });
 
-                container.scrollTop = container.scrollHeight;
+                // Бесшовная прокрутка
+                if (pages === 1) {
+                    // Если это первая загрузка — кидаем в самый низ к новым сообщениям
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    // Если подгрузили старые — оставляем пользователя на том же сообщении, которое он читал
+                    container.scrollTop = container.scrollHeight - oldScrollHeight;
+                }
+                
             } catch (error) {
-                container.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка сети. Проверь сервер.</div>';
+                if (pages === 1) {
+                    container.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка сети. Проверь сервер.</div>';
+                }
             }
         }
 
-        // НОВАЯ ФУНКЦИЯ: Запрос файла у бота
         async function requestFileDownload(fileName) {
             tg.showAlert(`Запрашиваю файл: ${fileName}\n\nБот пришлет его прямо в этот чат через несколько секунд!`);
-            
             try {
                 await fetch(`${BACKEND_BASE}/api/request_file`, {
                     method: 'POST',
