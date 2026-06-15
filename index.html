@@ -11,7 +11,6 @@
             --text-color: var(--tg-theme-text-color, #ffffff);
             --hint-color: var(--tg-theme-hint-color, #707579);
             --second-bg: var(--tg-theme-secondary-bg-color, #1c1c1d);
-            
             --msg-in-bg: #262628;
             --msg-in-text: #ffffff;
             --msg-out-bg: #e3ffc2;
@@ -85,33 +84,24 @@
         
         .msg-text { margin-bottom: 2px; }
         
-        /* Стили для фотографий в сообщениях */
-        .chat-photo {
-            max-width: 100%;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            display: block;
-            object-fit: cover;
-        }
+        .chat-photo { max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: cover; }
         
-        /* Стили для файлов-документов */
+        /* КЛИКАБЕЛЬНЫЙ ФАЙЛ */
         .chat-file {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            gap: 10px;
+            display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; gap: 10px;
+            cursor: pointer; transition: opacity 0.2s;
         }
+        .chat-file:active { opacity: 0.6; }
         .msg-bubble.in .chat-file { background: rgba(255, 255, 255, 0.1); }
         .msg-bubble.out .chat-file { background: rgba(0, 0, 0, 0.08); }
+        
         .file-icon { font-size: 20px; }
-        .file-name { font-size: 14px; font-weight: 500; word-break: break-all; line-height: 1.2; }
+        .file-name { flex: 1; font-size: 14px; font-weight: 500; word-break: break-all; line-height: 1.2; }
+        .file-download-btn { font-size: 16px; opacity: 0.8; }
 
         .msg-time { float: right; font-size: 11px; margin-top: 4px; margin-bottom: -4px; margin-left: 10px; line-height: 1; }
         .msg-bubble.in .msg-time { color: rgba(255, 255, 255, 0.4); }
         .msg-bubble.out .msg-time { color: rgba(0, 0, 0, 0.4); }
-        .msg-bubble.out.light-theme .msg-time { color: rgba(0, 0, 0, 0.4); }
 
         .loading-text { text-align: center; color: var(--hint-color); margin-top: 20px; font-size: 14px; }
 
@@ -178,7 +168,7 @@
                     listContainer.appendChild(item);
                 });
             } catch (e) {
-                listContainer.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка загрузки чатов. Проверь сервер.</div>';
+                listContainer.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка загрузки. Проверь сервер.</div>';
             }
         }
 
@@ -205,24 +195,22 @@
                     const row = document.createElement('div');
                     row.className = `msg-row ${msg.is_out ? 'out' : 'in'}`;
                     
-                    // Собираем HTML содержимого сообщения
                     let contentHtml = '';
                     
-                    // Если есть картинка
                     if (msg.media_type === 'photo' && msg.media_url) {
                         contentHtml += `<img src="${msg.media_url}" class="chat-photo" loading="lazy">`;
                     } 
-                    // Если есть файл
                     else if (msg.media_type === 'file') {
+                        // Файл теперь кликабельный и вызывает функцию requestFileDownload
                         contentHtml += `
-                            <div class="chat-file">
+                            <div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)">
                                 <div class="file-icon">📎</div>
                                 <div class="file-name">${escapeHtml(msg.media_name)}</div>
+                                <div class="file-download-btn">⬇️</div>
                             </div>
                         `;
                     }
                     
-                    // Если есть текст (подпись к фото или обычный текст)
                     if (msg.text) {
                         contentHtml += `<div class="msg-text">${escapeHtml(msg.text)}</div>`;
                     }
@@ -242,6 +230,21 @@
             }
         }
 
+        // НОВАЯ ФУНКЦИЯ: Запрос файла у бота
+        async function requestFileDownload(fileName) {
+            tg.showAlert(`Запрашиваю файл: ${fileName}\n\nБот пришлет его прямо в этот чат через несколько секунд!`);
+            
+            try {
+                await fetch(`${BACKEND_BASE}/api/request_file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat: currentChatId, file_name: fileName })
+                });
+            } catch (e) {
+                console.error("Ошибка при запросе файла:", e);
+            }
+        }
+
         function closeDialog() {
             document.getElementById('dialog-screen').classList.remove('active');
             currentChatId = null;
@@ -250,18 +253,13 @@
         function sendMessage() {
             const input = document.getElementById('msg-input');
             const text = input.value.trim();
-            
             if (!text || !currentChatId) return;
-
             tg.sendData(JSON.stringify({ chat_id: currentChatId, text: text }));
             tg.close();
         }
 
         function checkEnter(event) { if (event.key === 'Enter') sendMessage(); }
-
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
+        function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 
         initChats();
     </script>
