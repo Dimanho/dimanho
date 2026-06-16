@@ -83,7 +83,13 @@
         .msg-bubble.out { background-color: var(--msg-out-bg); color: var(--msg-out-text); border-bottom-right-radius: 4px; }
         
         .msg-text { margin-bottom: 2px; }
-        .chat-photo { max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: cover; }
+        
+        /* КЛИКАБЕЛЬНОЕ ФОТО */
+        .chat-photo { 
+            max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: cover; 
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        .chat-photo:active { opacity: 0.7; }
         
         .chat-file {
             display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; gap: 10px;
@@ -116,6 +122,45 @@
             outline: none; background-color: var(--bg-color); color: var(--text-color);
         }
         .send-btn { background-color: #2481cc; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+
+        /* === НОВЫЙ БЛОК: СТИЛИ ДЛЯ ПРОСМОТРЩИКА ФОТО === */
+        #image-viewer {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        #image-viewer.active {
+            display: flex;
+            opacity: 1;
+        }
+        #viewer-img {
+            max-width: 95%;
+            max-height: 85%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .close-viewer-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 36px;
+            font-weight: 300;
+            cursor: pointer;
+            padding: 10px;
+            line-height: 1;
+        }
     </style>
 </head>
 <body>
@@ -139,6 +184,11 @@
         </div>
     </div>
 
+    <div id="image-viewer" onclick="closeImage()">
+        <span class="close-viewer-btn">&times;</span>
+        <img id="viewer-img" src="">
+    </div>
+
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
@@ -146,7 +196,7 @@
         const BACKEND_BASE = "https://d1manho.online:9443";
         let currentChatId = null;
         let currentPages = 1; 
-        let lastHistoryLength = 0; // Запоминаем, сколько сообщений было
+        let lastHistoryLength = 0;
 
         async function initChats() {
             const listContainer = document.getElementById('chats-list');
@@ -178,7 +228,7 @@
         async function openDialog(chatName) {
             currentChatId = chatName;
             currentPages = 1;
-            lastHistoryLength = 0; // Сброс счетчика
+            lastHistoryLength = 0; 
             
             document.getElementById('chat-title').innerText = chatName;
             document.getElementById('dialog-screen').classList.add('active');
@@ -210,12 +260,11 @@
                     return;
                 }
 
-                // УМНАЯ ЛОГИКА ПОКАЗА КНОПКИ
                 let showBtn = false;
                 if (pages === 1 && data.history.length >= 25) {
-                    showBtn = true; // На первой странице показываем, если сообщений прилично
+                    showBtn = true; 
                 } else if (pages > 1 && data.history.length > lastHistoryLength) {
-                    showBtn = true; // На следующих - пока прибавляются новые
+                    showBtn = true; 
                 }
 
                 if (showBtn) {
@@ -232,7 +281,6 @@
                     container.appendChild(endText);
                 }
 
-                // Обновляем счетчик для следующего раза
                 lastHistoryLength = data.history.length;
 
                 data.history.forEach(msg => {
@@ -240,8 +288,10 @@
                     row.className = `msg-row ${msg.is_out ? 'out' : 'in'}`;
                     
                     let contentHtml = '';
+                    
+                    // ДОБАВЛЕН onclick="openImage(this.src)" ДЛЯ ФОТОГРАФИЙ
                     if (msg.media_type === 'photo' && msg.media_url) {
-                        contentHtml += `<img src="${msg.media_url}" class="chat-photo" loading="lazy">`;
+                        contentHtml += `<img src="${msg.media_url}" class="chat-photo" loading="lazy" onclick="openImage(this.src)">`;
                     } else if (msg.media_type === 'file') {
                         contentHtml += `<div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)"><div class="file-icon">📎</div><div class="file-name">${escapeHtml(msg.media_name)}</div><div class="file-download-btn">⬇️</div></div>`;
                     }
@@ -273,7 +323,23 @@
             } catch (e) { console.error("Ошибка при запросе файла:", e); }
         }
 
+        // === НОВЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С ГАЛЕРЕЕЙ ===
+        function openImage(src) {
+            const viewer = document.getElementById('image-viewer');
+            const viewerImg = document.getElementById('viewer-img');
+            viewerImg.src = src;
+            viewer.classList.add('active');
+        }
+
+        function closeImage() {
+            const viewer = document.getElementById('image-viewer');
+            viewer.classList.remove('active');
+            // Очищаем src чуть позже, чтобы закрытие было плавным
+            setTimeout(() => { document.getElementById('viewer-img').src = ''; }, 200);
+        }
+
         function closeDialog() { document.getElementById('dialog-screen').classList.remove('active'); currentChatId = null; }
+        
         function sendMessage() {
             const input = document.getElementById('msg-input');
             const text = input.value.trim();
