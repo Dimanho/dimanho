@@ -11,18 +11,6 @@
             --text-color: var(--tg-theme-text-color, #ffffff);
             --hint-color: var(--tg-theme-hint-color, #707579);
             --second-bg: var(--tg-theme-secondary-bg-color, #1c1c1d);
-            --msg-in-bg: #262628;
-            --msg-in-text: #ffffff;
-            --msg-out-bg: #e3ffc2;
-            --msg-out-text: #000000;
-        }
-
-        @media (prefers-color-scheme: light) {
-            :root {
-                --msg-in-bg: #ffffff;
-                --msg-in-text: #000000;
-                --msg-out-bg: #e3ffc2;
-            }
         }
 
         body {
@@ -33,134 +21,73 @@
 
         #app { display: flex; flex-direction: column; height: 100vh; position: relative; }
 
-        #chats-screen { display: flex; flex-direction: column; height: 100%; background-color: var(--bg-color); }
-        .screen-header {
-            padding: 14px 16px; font-size: 18px; font-weight: 600;
-            background-color: var(--second-bg); border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-        }
+        #chats-screen { display: flex; flex-direction: column; height: 100%; }
+        .screen-header { padding: 14px 16px; font-size: 18px; font-weight: 600; background-color: var(--second-bg); border-bottom: 1px solid rgba(128,128,128,0.1); }
         #chats-list { flex: 1; overflow-y: auto; }
-        .chat-item {
-            display: flex; align-items: center; padding: 12px 16px;
-            border-bottom: 1px solid rgba(128, 128, 128, 0.1); cursor: pointer;
-        }
-        .chat-item:active { background-color: rgba(128, 128, 128, 0.1); }
-        
-        .chat-avatar {
-            width: 48px; height: 48px; background-color: #2481cc; color: white;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 18px; margin-right: 14px;
-        }
+        .chat-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(128,128,128,0.1); cursor: pointer; }
+        .chat-item:active { background-color: rgba(128,128,128,0.1); }
+        .chat-avatar { width: 48px; height: 48px; background-color: #2481cc; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; margin-right: 14px; }
         .chat-name { font-size: 16px; font-weight: 500; }
 
         #dialog-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--bg-color); display: flex; flex-direction: column;
-            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            z-index: 10;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 10;
         }
         #dialog-screen.active { transform: translateX(0); }
 
-        .dialog-header {
-            display: flex; align-items: center; padding: 12px 16px;
-            background-color: var(--second-bg); border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-        }
-        .back-btn {
-            background: none; border: none; color: #2481cc; font-size: 16px;
-            padding: 0 12px 0 0; margin: 0; cursor: pointer; display: flex; align-items: center;
-        }
+        .dialog-header { display: flex; align-items: center; padding: 12px 16px; background-color: var(--second-bg); border-bottom: 1px solid rgba(128,128,128,0.1); }
+        .back-btn { background: none; border: none; color: #2481cc; font-size: 16px; padding: 0 12px 0 0; margin: 0; cursor: pointer; display: flex; align-items: center; }
         .current-chat-name { font-size: 16px; font-weight: 600; }
 
-        #messages-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+        #messages-container { 
+            flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; 
+            background-color: #0f0f0f; /* Темный фон чата в стиле TG */
+        }
+        
         .msg-row { display: flex; width: 100%; margin-bottom: 2px; }
         .msg-row.in { justify-content: flex-start; }
         .msg-row.out { justify-content: flex-end; }
 
         .msg-bubble {
-            max-width: 75%; padding: 6px 10px 8px 12px; border-radius: 16px; font-size: 15px; line-height: 1.3;
-            position: relative; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            max-width: 80%; padding: 8px 12px; font-size: 15px; line-height: 1.4;
+            position: relative; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
-        .msg-bubble.in { background-color: var(--msg-in-bg); color: var(--msg-in-text); border-bottom-left-radius: 4px; }
-        .msg-bubble.out { background-color: var(--msg-out-bg); color: var(--msg-out-text); border-bottom-right-radius: 4px; }
+        .msg-bubble.in { background-color: #262628; color: #ffffff; border-radius: 16px 16px 16px 4px; }
+        .msg-bubble.out { background-color: #43a047; color: #ffffff; border-radius: 16px 16px 4px 16px; }
         
+        /* Стили для структуры сообщения (Автор + Реплай) */
+        .msg-author { font-size: 13px; font-weight: 600; color: #64b5f6; margin-bottom: 4px; display: block; }
+        .msg-reply {
+            border-left: 3px solid #64b5f6; background: rgba(100, 181, 246, 0.1);
+            padding: 4px 8px; border-radius: 4px; font-size: 13px; margin-bottom: 6px;
+            color: #e0e0e0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .msg-bubble.out .msg-reply { border-left-color: #a5d6a7; background: rgba(165, 214, 167, 0.2); color: #f5f5f5; }
         .msg-text { margin-bottom: 2px; }
-        
-        /* КЛИКАБЕЛЬНОЕ ФОТО */
-        .chat-photo { 
-            max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: cover; 
-            cursor: pointer; transition: opacity 0.2s;
-        }
+
+        .chat-photo { max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: cover; cursor: pointer; transition: opacity 0.2s; }
         .chat-photo:active { opacity: 0.7; }
         
-        .chat-file {
-            display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; gap: 10px;
-            cursor: pointer; transition: opacity 0.2s;
-        }
+        .chat-file { display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; gap: 10px; cursor: pointer; transition: opacity 0.2s; background: rgba(255,255,255,0.1); }
         .chat-file:active { opacity: 0.6; }
-        .msg-bubble.in .chat-file { background: rgba(255, 255, 255, 0.1); }
-        .msg-bubble.out .chat-file { background: rgba(0, 0, 0, 0.08); }
+        .msg-bubble.out .chat-file { background: rgba(0,0,0,0.1); }
         
         .file-icon { font-size: 20px; }
         .file-name { flex: 1; font-size: 14px; font-weight: 500; word-break: break-all; line-height: 1.2; }
-        .file-download-btn { font-size: 16px; opacity: 0.8; }
-
-        .msg-time { float: right; font-size: 11px; margin-top: 4px; margin-bottom: -4px; margin-left: 10px; line-height: 1; }
-        .msg-bubble.in .msg-time { color: rgba(255, 255, 255, 0.4); }
-        .msg-bubble.out .msg-time { color: rgba(0, 0, 0, 0.4); }
+        .msg-time { float: right; font-size: 11px; margin-top: 4px; margin-bottom: -4px; margin-left: 10px; line-height: 1; color: rgba(255,255,255,0.5); }
 
         .loading-text { text-align: center; color: var(--hint-color); margin-top: 20px; margin-bottom: 20px; font-size: 14px; }
-
-        .load-more-btn {
-            text-align: center; padding: 8px 16px; margin: 0 auto 10px auto;
-            background-color: var(--second-bg); border-radius: 16px;
-            color: #2481cc; font-size: 14px; font-weight: 500; cursor: pointer; width: max-content;
-        }
-        .load-more-btn:active { background-color: rgba(128, 128, 128, 0.2); }
-
+        .load-more-btn { text-align: center; padding: 8px 16px; margin: 0 auto 10px auto; background-color: var(--second-bg); border-radius: 16px; color: #2481cc; font-size: 14px; font-weight: 500; cursor: pointer; width: max-content; }
+        
         .input-panel { padding: 8px 12px 16px; background-color: var(--second-bg); display: flex; gap: 8px; align-items: center; }
-        .message-input {
-            flex: 1; border: none; border-radius: 20px; padding: 10px 16px; font-size: 15px;
-            outline: none; background-color: var(--bg-color); color: var(--text-color);
-        }
+        .message-input { flex: 1; border: none; border-radius: 20px; padding: 10px 16px; font-size: 15px; outline: none; background-color: var(--bg-color); color: var(--text-color); }
         .send-btn { background-color: #2481cc; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
 
-        /* === НОВЫЙ БЛОК: СТИЛИ ДЛЯ ПРОСМОТРЩИКА ФОТО === */
-        #image-viewer {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(3px);
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        #image-viewer.active {
-            display: flex;
-            opacity: 1;
-        }
-        #viewer-img {
-            max-width: 95%;
-            max-height: 85%;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            object-fit: contain;
-        }
-        .close-viewer-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 36px;
-            font-weight: 300;
-            cursor: pointer;
-            padding: 10px;
-            line-height: 1;
-        }
+        #image-viewer { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(3px); align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; }
+        #image-viewer.active { display: flex; opacity: 1; }
+        #viewer-img { max-width: 95%; max-height: 85%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain; }
+        .close-viewer-btn { position: absolute; top: 20px; right: 20px; color: white; font-size: 36px; font-weight: 300; cursor: pointer; padding: 10px; line-height: 1; }
     </style>
 </head>
 <body>
@@ -201,16 +128,13 @@
         async function initChats() {
             const listContainer = document.getElementById('chats-list');
             listContainer.innerHTML = '<div class="loading-text">Загрузка списка чатов...</div>';
-            
             try {
                 const response = await fetch(`${BACKEND_BASE}/api/chats`);
                 const data = await response.json();
-                
                 if (!data.chats || data.chats.length === 0) {
                     listContainer.innerHTML = '<div class="loading-text">Список пуст. Подожди прогрузки MAX.</div>';
                     return;
                 }
-
                 listContainer.innerHTML = '';
                 data.chats.forEach(chat => {
                     const firstLetter = chat.n ? chat.n.charAt(0).toUpperCase() : '?';
@@ -226,21 +150,16 @@
         }
 
         async function openDialog(chatName) {
-            currentChatId = chatName;
-            currentPages = 1;
-            lastHistoryLength = 0; 
-            
+            currentChatId = chatName; currentPages = 1; lastHistoryLength = 0; 
             document.getElementById('chat-title').innerText = chatName;
             document.getElementById('dialog-screen').classList.add('active');
-            
             await renderHistory(chatName, currentPages);
         }
 
         async function loadOlderMessages() {
             currentPages++;
             const btn = document.getElementById('load-more-btn');
-            if (btn) btn.innerText = "⏳ Подгрузка из MAX...";
-            
+            if (btn) btn.innerText = "⏳ Подгрузка...";
             await renderHistory(currentChatId, currentPages);
         }
 
@@ -260,25 +179,13 @@
                     return;
                 }
 
-                let showBtn = false;
-                if (pages === 1 && data.history.length >= 25) {
-                    showBtn = true; 
-                } else if (pages > 1 && data.history.length > lastHistoryLength) {
-                    showBtn = true; 
-                }
-
+                let showBtn = (pages === 1 && data.history.length >= 25) || (pages > 1 && data.history.length > lastHistoryLength);
                 if (showBtn) {
                     const loadBtn = document.createElement('div');
-                    loadBtn.id = 'load-more-btn';
-                    loadBtn.className = 'load-more-btn';
+                    loadBtn.className = 'load-more-btn'; loadBtn.id = 'load-more-btn';
                     loadBtn.innerText = '🔼 Загрузить старые сообщения';
                     loadBtn.onclick = loadOlderMessages;
                     container.appendChild(loadBtn);
-                } else if (pages > 1 && data.history.length === lastHistoryLength) {
-                    const endText = document.createElement('div');
-                    endText.className = 'loading-text';
-                    endText.innerText = 'Начало переписки';
-                    container.appendChild(endText);
                 }
 
                 lastHistoryLength = data.history.length;
@@ -289,55 +196,40 @@
                     
                     let contentHtml = '';
                     
-                    // ДОБАВЛЕН onclick="openImage(this.src)" ДЛЯ ФОТОГРАФИЙ
+                    // Блок автора (не показываем для своих исходящих)
+                    if (msg.author && !msg.is_out) {
+                        contentHtml += `<div class="msg-author">${escapeHtml(msg.author)}</div>`;
+                    }
+                    
+                    // Блок цитаты
+                    if (msg.reply) {
+                        contentHtml += `<div class="msg-reply">${escapeHtml(msg.reply)}</div>`;
+                    }
+
                     if (msg.media_type === 'photo' && msg.media_url) {
                         contentHtml += `<img src="${msg.media_url}" class="chat-photo" loading="lazy" onclick="openImage(this.src)">`;
                     } else if (msg.media_type === 'file') {
-                        contentHtml += `<div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)"><div class="file-icon">📎</div><div class="file-name">${escapeHtml(msg.media_name)}</div><div class="file-download-btn">⬇️</div></div>`;
+                        contentHtml += `<div class="chat-file" data-filename="${escapeHtml(msg.media_name)}" onclick="requestFileDownload(this.dataset.filename)"><div class="file-icon">📎</div><div class="file-name">${escapeHtml(msg.media_name)}</div></div>`;
                     }
-                    if (msg.text) contentHtml += `<div class="msg-text">${escapeHtml(msg.text)}</div>`;
+                    if (msg.text) contentHtml += `<div class="msg-text">${escapeHtml(msg.text).replace(/\\n/g, '<br>')}</div>`;
 
                     row.innerHTML = `<div class="msg-bubble ${msg.is_out ? 'out' : 'in'}">${contentHtml}<span class="msg-time">${escapeHtml(msg.time)}</span></div>`;
                     container.appendChild(row);
                 });
 
-                if (pages === 1) {
-                    container.scrollTop = container.scrollHeight;
-                } else {
-                    container.scrollTop = container.scrollHeight - oldScrollHeight;
-                }
-                
+                container.scrollTop = pages === 1 ? container.scrollHeight : container.scrollHeight - oldScrollHeight;
             } catch (error) {
-                if (pages === 1) container.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка сети. Проверь сервер.</div>';
+                if (pages === 1) container.innerHTML = '<div class="loading-text" style="color: #ff595a;">❌ Ошибка сети.</div>';
             }
         }
 
         async function requestFileDownload(fileName) {
-            tg.showAlert(`Запрашиваю файл: ${fileName}\n\nБот пришлет его прямо в этот чат через несколько секунд!`);
-            try {
-                await fetch(`${BACKEND_BASE}/api/request_file`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat: currentChatId, file_name: fileName })
-                });
-            } catch (e) { console.error("Ошибка при запросе файла:", e); }
+            tg.showAlert(`Запрашиваю файл: ${fileName}\\n\\nБот пришлет его прямо в этот чат через несколько секунд!`);
+            try { await fetch(`${BACKEND_BASE}/api/request_file`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat: currentChatId, file_name: fileName }) }); } catch (e) { }
         }
 
-        // === НОВЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С ГАЛЕРЕЕЙ ===
-        function openImage(src) {
-            const viewer = document.getElementById('image-viewer');
-            const viewerImg = document.getElementById('viewer-img');
-            viewerImg.src = src;
-            viewer.classList.add('active');
-        }
-
-        function closeImage() {
-            const viewer = document.getElementById('image-viewer');
-            viewer.classList.remove('active');
-            // Очищаем src чуть позже, чтобы закрытие было плавным
-            setTimeout(() => { document.getElementById('viewer-img').src = ''; }, 200);
-        }
-
+        function openImage(src) { document.getElementById('viewer-img').src = src; document.getElementById('image-viewer').classList.add('active'); }
+        function closeImage() { document.getElementById('image-viewer').classList.remove('active'); setTimeout(() => { document.getElementById('viewer-img').src = ''; }, 200); }
         function closeDialog() { document.getElementById('dialog-screen').classList.remove('active'); currentChatId = null; }
         
         function sendMessage() {
