@@ -83,6 +83,7 @@
         .input-panel { padding: 8px 12px 16px; background-color: var(--second-bg); display: flex; gap: 8px; align-items: center; }
         .message-input { flex: 1; border: none; border-radius: 20px; padding: 10px 16px; font-size: 15px; outline: none; background-color: var(--bg-color); color: var(--text-color); }
         .send-btn { background-color: #2481cc; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+        .send-btn:disabled { background-color: #1a5c92; opacity: 0.7; cursor: not-allowed; }
 
         #image-viewer { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(3px); align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; }
         #image-viewer.active { display: flex; opacity: 1; }
@@ -106,7 +107,7 @@
             <div id="messages-container"></div>
             <div class="input-panel">
                 <input type="text" id="msg-input" class="message-input" placeholder="Сообщение..." onkeypress="checkEnter(event)">
-                <button class="send-btn" onclick="sendMessage()">➤</button>
+                <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
             </div>
         </div>
     </div>
@@ -196,12 +197,10 @@
                     
                     let contentHtml = '';
                     
-                    // Блок автора (не показываем для своих исходящих)
                     if (msg.author && !msg.is_out) {
                         contentHtml += `<div class="msg-author">${escapeHtml(msg.author)}</div>`;
                     }
                     
-                    // Блок цитаты
                     if (msg.reply) {
                         contentHtml += `<div class="msg-reply">${escapeHtml(msg.reply)}</div>`;
                     }
@@ -232,12 +231,41 @@
         function closeImage() { document.getElementById('image-viewer').classList.remove('active'); setTimeout(() => { document.getElementById('viewer-img').src = ''; }, 200); }
         function closeDialog() { document.getElementById('dialog-screen').classList.remove('active'); currentChatId = null; }
         
-        function sendMessage() {
+        // ОБНОВЛЕННАЯ ФУНКЦИЯ: ОТПРАВКА БЕЗ ЗАКРЫТИЯ WEBAPP
+        async function sendMessage() {
             const input = document.getElementById('msg-input');
+            const btn = document.getElementById('send-btn');
             const text = input.value.trim();
+            
             if (!text || !currentChatId) return;
-            tg.sendData(JSON.stringify({ chat_id: currentChatId, text: text }));
-            tg.close();
+
+            // Блокируем кнопку и инпут, чтобы не было спама
+            input.disabled = true;
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${BACKEND_BASE}/api/send_message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: currentChatId, text: text })
+                });
+                const data = await response.json();
+                
+                if(data.status === "ok") {
+                    input.value = ''; // Стираем текст
+                    // Обновляем историю, чтобы увидеть отправленное сообщение
+                    await renderHistory(currentChatId, 1);
+                } else {
+                    tg.showAlert("Ошибка сервера: " + data.message);
+                }
+            } catch (error) {
+                tg.showAlert("Ошибка сети: " + error);
+            } finally {
+                // Разблокируем интерфейс
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus(); // Возвращаем курсор для печати следующего сообщения
+            }
         }
 
         function checkEnter(event) { if (event.key === 'Enter') sendMessage(); }
